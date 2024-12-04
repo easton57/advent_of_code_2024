@@ -4,79 +4,43 @@ import 'dart:io';
 
 void main() async {
   final inFile = File("inputs/day_2.txt");
+  int safe = 0;
 
   Stream<String> lines =
       inFile.openRead().transform(utf8.decoder).transform(LineSplitter());
 
-  int safe = await isItSafe2(lines);
+  await for (String i in lines) {
+    var split = i.split(" ");
+    bool isSafe = await isItSafe(split, true);
+
+    if (isSafe) {
+      safe++;
+    }
+  }
 
   print("Safe $safe");
 }
 
-Future<int> isItSafe(Stream<String> input) async {
-  int safe = 0;
+Future<bool> isItSafe(List split, bool allowRemoval) async {
+  bool ascending = int.parse(split[0]) < int.parse(split[1]);
+  bool isSafe = true;
 
-  // Time for a horrible loop
-  await for (String i in input) {
-    var split = i.split(" ");
+  for (int i = 1; i < split.length; i++) {
+    int prev = int.parse(split[i - 1]);
+    int curr = int.parse(split[i]);
+    if ((curr > prev) != ascending || (curr - prev).abs() > 3 || prev == curr) {
+      isSafe = false;
+    }
+  }
 
-    bool decreasing = false;
-
-    for (int j = 1; j < split.length; j++) {
-      int prev = int.parse(split[j - 1]);
-      int curr = int.parse(split[j]);
-      int diff = prev - curr;
-      if (j - 1 == 0 && prev > curr) {
-        decreasing = true;
-      }
-
-      if (!decreasing) {
-        diff = diff * -1;
-      }
-
-      if (diff > 3 || diff < 1) {
-        break;
-      } else if (j + 1 == split.length) {
-        safe++;
-        decreasing = false;
+  if (!isSafe && allowRemoval) {
+    for (int i = 0; i < split.length; i++) {
+      bool help = await isItSafe(split.sublist(0, i) + split.sublist(i + 1,), false);
+      if (help) {
+        isSafe = true;
       }
     }
   }
 
-  return safe;
-}
-
-Future<int> isItSafe2(Stream<String> input) async {
-  int safe = 0;
-
-  // Time for a horrible loop
-  await for (String i in input) {
-    var split = i.split(" ");
-
-    bool decreasing = false;
-    bool bad_level_used = false;
-
-    for (int j = 1; j < split.length; j++) {
-      int prev = int.parse(split[j - 1]);
-      int curr = int.parse(split[j]);
-      int diff = prev - curr;
-      if (j - 1 == 0 && prev > curr) {
-        decreasing = true;
-      }
-
-      if (!decreasing) {
-        diff = diff * -1;
-      }
-
-      if (diff > 3 || diff < 1) {
-        break;
-      } else if (j + 1 == split.length) {
-        safe++;
-        decreasing = false;
-        bad_level_used = false;
-      }
-    }
-  }
-
-  return safe;
+  return isSafe;
 }
